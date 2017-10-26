@@ -9,6 +9,7 @@ import socketio
 import eventlet
 import eventlet.wsgi
 from PIL import Image
+import cv2
 from flask import Flask
 from io import BytesIO
 
@@ -60,7 +61,30 @@ def telemetry(sid, data):
         # The current image from the center camera of the car
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
-        image_array = np.asarray(image)
+        
+        # Variables for tunning
+        resize_shape = (32, 32)
+        resize_images = True
+        use_gradient_filter = False
+        use_gray_scale = False
+        use_hsv = False
+        
+        image_array = np.asarray(image).copy()
+        if resize_images:
+            image_array = cv2.resize(image_array, resize_shape)
+            #####image = image.resize(resize_shape, 1)
+        #####image_array = np.asarray(image).copy()
+        image_array = cv2.cvtColor(image_array, cv2.COLOR_RGB2BGR)
+        if use_gray_scale:
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_BGR2GRAY)
+        if use_gradient_filter:
+            image_array = cv2.Canny(image_array,240,250)
+            #image_array = cv2.Sobel(image_array,cv2.CV_32F,0,1,ksize=7)
+        if use_gray_scale:
+            #image_array = np.average(image_array, axis=2)
+            image_array = np.expand_dims(image_array, axis=2)
+        if use_hsv:
+            image_array = cv2.cvtColor(image_array, cv2.COLOR_BGR2HSV)
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
